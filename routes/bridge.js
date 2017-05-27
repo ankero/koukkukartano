@@ -9,6 +9,58 @@ var sensorNames = [
   'Hue ambient light sensor'
 ];
 
+var sensorTypes = {
+  "ZLLTemperature": {
+    key: 'temperature',
+    label: 'Temperature'
+  },
+  "ZLLPresence": {
+    key: 'presence',
+    label: 'Presence'
+  },
+  "ZLLLightLevel": {
+    key: 'light',
+    label: 'Light level'
+  }
+};
+
+/**
+* @name openConnection
+* @description Opens connection to sensors, return success if successfull
+* @author Antero Hanhirova
+* @param {Function} - Returns function with payload
+* @returns {Function} - Returns function with payload
+*/
+exports.openConnection = function(fn){
+  console.log("Connecting bridge...");
+
+  var requestUrl = baseUrl + username;
+  var sensorList = [];
+  request
+    .get(requestUrl)
+    .then(function(res){
+      fn( {success:true} );
+    }).catch(function(err){
+      fn( {success:false, error: err} );
+    });
+};
+
+/**
+* @name getSensorData
+* @description Gets sensor data from local bridge
+              [{
+                id: {String}, // id to use to control the sensor
+                uniqueid: {String}, // unique id of sensor
+                sensorId: {String}, // sensorId - one physical device has multiple sensors
+                modelid: {String}, // model of sensor
+                type: {String}, // Type of sensor
+                literalType: {Object}, // Sensor literal type, ( check sensorType variable )
+                state: {Object} // Actual sensor data
+              }]
+* @author Antero Hanhirova
+* @param {Function} - Returns function with payload
+* @returns {Function} - Returns function with payload
+*/
 exports.getSensorData = function( fn ) {
   var requestUrl = baseUrl + username + '/sensors';
   var sensorList = [];
@@ -42,6 +94,7 @@ exports.getSensorData = function( fn ) {
           sensorId: sensor.sensorId,
           modelid: sensor.modelid,
           type: sensor.type,
+          literalType: sensorTypes[sensor.type],
           state: sensor.state
         };
       });
@@ -59,6 +112,7 @@ exports.getSensorData = function( fn ) {
       return fn(sensorBlock);
     })
     .catch(function(err){
-      console.log(err);
+      console.error(err);
+      return fn([],err);
     });
 };

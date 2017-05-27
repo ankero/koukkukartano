@@ -6,29 +6,43 @@ firebase.initializeApp({
   databaseURL: "https://koukkukartano-91a94.firebaseio.com"
 });
 
-var MAX_HISTORY_ITEMS = 5;
+var SENSOR_REF = 'sensor_data';
+var USER_REF = 'users';
+var MAX_HISTORY_ITEMS = 2;
+var DB_STATUS;
 var db;
 
-
 exports.openConnection = function( fn ) {
-  db = firebase.database().ref("sensorData");
-  console.log("Connection to Firebase...");
+  db = firebase.database().ref(SENSOR_REF);
+  console.log("Connecting Firebase...");
   db.limitToLast(MAX_HISTORY_ITEMS).on('value', function(dataSnapshot) {
-    var items = [];
-    dataSnapshot.forEach(function(childSnapshot) {
-      var item = childSnapshot.val();
-      items.push(item);
-    });
-    if ( items.length === MAX_HISTORY_ITEMS ) {
-      console.log("Connection successfull");
-    } else {
-      console.log("Connection not working properly, or empty data.");
-    }
 
-    return fn();
+
+    if ( typeof DB_STATUS === 'undefined' ) {
+      // First connection test
+
+      if ( dataSnapshot.val() ) {
+        DB_STATUS = true;
+        return fn({success:true});
+      } else {
+        DB_STATUS = false;
+        return fn({success:false});
+      }
+    } else {
+      // Runtime connection test
+
+      if ( dataSnapshot.val() ) {
+        DB_STATUS = true;
+      } else {
+        console.log("Connection to db lost.. idling until reconnected.");
+        DB_STATUS = false;
+      }
+    }
   });
 };
 
 exports.put = function(data) {
-  db.push( data );
+  if ( DB_STATUS !== false ) {
+    db.push( data );
+  }
 };

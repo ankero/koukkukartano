@@ -35,13 +35,56 @@ exports.openConnection = function(fn){
   console.log("Connecting bridge...");
 
   var requestUrl = baseUrl + username;
-  var sensorList = [];
   request
     .get(requestUrl)
     .then(function(res){
       fn( {success:true} );
     }).catch(function(err){
       fn( {success:false, error: err} );
+    });
+};
+
+/**
+* @name getLightData
+* @description Gets sensor data from local bridge
+              [{
+                id: {String}, // id to use to control the light
+                uniqueid: {String}, // unique id of light
+                modelid: light.modelid, // model of light
+                type: light.type, // Type of light
+                state: {  // Actual light data
+                  on: light.state.on,
+                  bri: light.state.bri,
+                }
+              }]
+* @author Antero Hanhirova
+* @param {Function} - Returns function with payload
+* @returns {Function} - Returns function with payload
+*/
+exports.getLightData = function( fn ) {
+  var requestUrl = baseUrl + username + '/lights';
+  request
+    .get(requestUrl)
+    .then(function(res){
+
+      // Reduce light attributes
+      var lights = _.map(res.body, function(light, index){
+        return {
+          id: index,
+          uniqueid: light.uniqueid,
+          modelid: light.modelid,
+          state: {
+            on: light.state.on,
+            bri: light.state.bri,
+          }
+        };
+      });
+
+      return fn(lights);
+    })
+    .catch(function(err){
+      console.error(err);
+      return fn([],err);
     });
 };
 
@@ -63,11 +106,11 @@ exports.openConnection = function(fn){
 */
 exports.getSensorData = function( fn ) {
   var requestUrl = baseUrl + username + '/sensors';
-  var sensorList = [];
+  var sensorBlock = [];
   request
     .get(requestUrl)
     .then(function(res){
-      var sensorBlock = [];
+
 
       // Input all necessary datapoints
       _.each(res.body, function(sensor, index){

@@ -7,15 +7,19 @@ firebase.initializeApp({
 });
 
 var SENSOR_REF = 'sensor_data';
+var LIGHT_REF = 'light_data';
 var USER_REF = 'users';
 var MAX_HISTORY_ITEMS = 2;
 var DB_STATUS;
-var db;
+var sensorConnection,
+    lightConnection;
 
-exports.openConnection = function( fn ) {
-  db = firebase.database().ref(SENSOR_REF);
+exports.openConnections = function( fn ) {
+  sensorConnection = firebase.database().ref(SENSOR_REF);
+  lightConnection = firebase.database().ref(LIGHT_REF);
+
   console.log("Connecting Firebase...");
-  db.limitToLast(MAX_HISTORY_ITEMS).on('value', function(dataSnapshot) {
+  sensorConnection.limitToLast(MAX_HISTORY_ITEMS).on('value', function(dataSnapshot) {
 
 
     if ( typeof DB_STATUS === 'undefined' ) {
@@ -41,8 +45,14 @@ exports.openConnection = function( fn ) {
   });
 };
 
-exports.put = function(data) {
+exports.putSensorData = function(data) {
   if ( DB_STATUS !== false ) {
-    db.push( data );
+    sensorConnection.push( data );
+  }
+};
+
+exports.putLightData = function(data) {
+  if ( DB_STATUS !== false ) {
+    lightConnection.push( data );
   }
 };

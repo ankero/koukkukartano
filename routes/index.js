@@ -14,18 +14,33 @@ router.get('/', function(req, res) {
 
 
 /**
-* @name _saveToDb
+* @name _saveSensorDataToDb
 * @description Saves sensorData to db
 * @author Antero Hanhirova
 * @param {Object} - Sensor object
 */
-function _saveToDb( sensorData ) {
+function _saveSensorDataToDb( sensorData ) {
   var payload = {
     timestamp: new Date().getTime(),
     data: sensorData
   };
-  console.log("New payload in pipeline, sending to database.", payload.timestamp);
-  background.put( payload );
+  console.log("New sensor payload in pipeline, sending to database.", new Date(payload.timestamp));
+  background.putSensorData( payload );
+}
+
+/**
+* @name _saveLightDataToDb
+* @description Saves lightData to db
+* @author Antero Hanhirova
+* @param {Object} - Sensor object
+*/
+function _saveLightDataToDb( lightData ) {
+  var payload = {
+    timestamp: new Date().getTime(),
+    data: lightData
+  };
+  console.log("New light payload in pipeline, sending to database.", new Date(payload.timestamp));
+  background.putLightData( payload );
 }
 
 /**
@@ -38,7 +53,22 @@ function _getSensorData() {
     if ( !Array.isArray( sensorData ) ) {
       console.error("Error getting sensor read.");
     } else {
-      _saveToDb(sensorData);
+      _saveSensorDataToDb(sensorData);
+    }
+  });
+}
+
+/**
+* @name _getLightData
+* @description Gets light data from bridge
+* @author Antero Hanhirova
+*/
+function _getLightData() {
+  bridge.getLightData(function(lightData, result){
+    if ( !Array.isArray( lightData ) ) {
+      console.error("Error getting light read.");
+    } else {
+      _saveLightDataToDb(lightData);
     }
   });
 }
@@ -50,7 +80,10 @@ function _getSensorData() {
 */
 function _startInterval() {
   console.log("Connections successfull, starting interval.");
-  setInterval(_getSensorData, SENSOR_INTERVAL);
+  setInterval(function(){
+    _getSensorData();
+    _getLightData();
+  }, SENSOR_INTERVAL);
 }
 
 
@@ -61,7 +94,7 @@ function _startInterval() {
 */
 
 function _initBackgroundSync() {
-  background.openConnection(function( result ){
+  background.openConnections(function( result ){
     if ( !result.success ) {
       console.log("Error connection to db. Shutting down early.");
     } else {

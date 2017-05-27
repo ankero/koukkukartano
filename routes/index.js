@@ -4,6 +4,8 @@ var bridge = require('./bridge');
 var router = express.Router();
 
 
+var SENSOR_INTERVAL = 60000;
+
 /* GET home page. */
 
 router.get('/', function(req, res) {
@@ -11,15 +13,26 @@ router.get('/', function(req, res) {
 });
 
 
+/**
+* @name _saveToDb
+* @description Saves sensorData to db
+* @author Antero Hanhirova
+* @param {Object} - Sensor object
+*/
 function _saveToDb( sensorData ) {
   var payload = {
     timestamp: new Date().getTime(),
     data: sensorData
   };
-  console.log(payload.timestamp);
+  console.log("New payload in pipeline, sending to database.", payload.timestamp);
   background.put( payload );
 }
 
+/**
+* @name _getSensorData
+* @description Gets sensor data from bridge
+* @author Antero Hanhirova
+*/
 function _getSensorData() {
   bridge.getSensorData(function(sensorData, result){
     if ( !Array.isArray( sensorData ) ) {
@@ -30,26 +43,42 @@ function _getSensorData() {
   });
 }
 
+/**
+* @name _startInterval
+* @description Starts sensor get interval
+* @author Antero Hanhirova
+*/
 function _startInterval() {
-  setInterval(_getSensorData, 10000);
+  console.log("Connections successfull, starting interval.");
+  setInterval(_getSensorData, SENSOR_INTERVAL);
 }
 
 
-// Open connection to Firebase
-background.openConnection(function( result ){
-  if ( !result.success ) {
-    console.log("Error connection to db. Shutting down early.");
-  } else {
+/**
+* @name _initBackgroundSync
+* @description Initialises background sync with sensors and database
+* @author Antero Hanhirova
+*/
 
-    // Get sensor data
-    bridge.openConnection(function( result ){
-      if ( result.success ) {
-        _startInterval();
-      } else {
-        console.log("Error initalizing sensor read. Shutting down early. Message to follow.", result.error);
-      }
-    });
-  }
-});
+function _initBackgroundSync() {
+  background.openConnection(function( result ){
+    if ( !result.success ) {
+      console.log("Error connection to db. Shutting down early.");
+    } else {
+
+      // Get sensor data
+      bridge.openConnection(function( result ){
+        if ( result.success ) {
+          _startInterval();
+        } else {
+          console.log("Error initalizing sensor read. Shutting down early. Message to follow.", result.error);
+        }
+      });
+    }
+  });
+}
+
+
+_initBackgroundSync();
 
 module.exports = router;
